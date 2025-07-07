@@ -36,10 +36,7 @@
       animation:bounce 3s ease-in-out infinite;
       z-index:10;
     }
-    @keyframes bounce{
-      0%,100%{transform:translateY(0)}
-      50%{transform:translateY(-15px)}
-    }
+    @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-15px)}}
     .message:hover{transform:scale(1.08)}
 
     /* --------- Contenedor de burbujas --------- */
@@ -66,11 +63,7 @@
       word-break:break-word;   /* rompe palabras largas */
     }
 
-    @keyframes floatText{
-      0%{opacity:0;transform:scale(.5) translateY(0)}
-      50%{opacity:1;transform:scale(1.2) translateY(-50px)}
-      100%{opacity:0;transform:scale(1) translateY(-100px)}
-    }
+    @keyframes floatText{0%{opacity:0;transform:scale(.5) translateY(0)}50%{opacity:1;transform:scale(1.2) translateY(-50px)}100%{opacity:0;transform:scale(1) translateY(-100px)}}
 
     /* --------- Accesibilidad: reduce motion --------- */
     @media (prefers-reduced-motion:reduce){*{animation:none !important}}
@@ -98,27 +91,55 @@
       "Mi amor está contigo, incluso en la distancia💕"
     ];
 
+    /* Copia de trabajo para no repetir hasta mostrar todos */
+    let remainingMessages=[...messages];
+
+    /* Posiciones usadas recientemente para evitar pegado */
+    let lastPositions=[]; // almacenará {top,left} de las burbujas vigentes
+
     const container=document.getElementById("bubbles-text");
-    const MAX_BUBBLES=10;          // ✅ tope para evitar saturar pantalla
+    const MAX_BUBBLES=10;          // máximo de burbujas simultáneas
+    const MIN_DIST=10;             // distancia mínima (en vw/vh) entre burbujas
+
+    function getRandomMessage(){
+      // Si ya mostramos todos, reiniciamos
+      if(remainingMessages.length===0) remainingMessages=[...messages];
+      const idx=Math.floor(Math.random()*remainingMessages.length);
+      return remainingMessages.splice(idx,1)[0];
+    }
 
     function createTextBubble(){
-      // Si ya hay demasiadas burbujas, no creamos más
+      // no crear si hay demasiadas burbujas
       if(container.children.length>=MAX_BUBBLES) return;
 
       const bubble=document.createElement("div");
       bubble.className="text-bubble";
-      bubble.innerText=messages[Math.floor(Math.random()*messages.length)];
+      bubble.innerText=getRandomMessage();
 
-      // Posición aleatoria dentro de zona segura (20‑80% ancho, 10‑80% alto)
-      const left=Math.random()*60+20;  // 20‑80
-      const top =Math.random()*70+10;  // 10‑80
+      // Buscar posición sin estar muy cerca de otras burbujas
+      let attempts=0;
+      let top,left,isTooClose;
+      do{
+        left=Math.random()*60+20; // 20–80% ancho
+        top =Math.random()*60+20; // 20–80% alto
+        isTooClose=lastPositions.some(pos=>Math.abs(pos.top-top)<MIN_DIST && Math.abs(pos.left-left)<MIN_DIST);
+        attempts++;
+      }while(isTooClose && attempts<15);
+
+      // Guardamos esta posición
+      lastPositions.push({top,left});
+      if(lastPositions.length>MAX_BUBBLES) lastPositions.shift();
+
       bubble.style.left=left+"vw";
       bubble.style.top =top +"vh";
-
       container.appendChild(bubble);
 
-      // Eliminar tras la animación
-      setTimeout(()=>bubble.remove(),8000);
+      // Eliminar después de la animación y borrar posición
+      setTimeout(()=>{
+        bubble.remove();
+        // eliminar también su posición del registro
+        lastPositions=lastPositions.filter(pos=>pos.top!==top || pos.left!==left);
+      },8000);
     }
 
     // Crear burbuja cada 0.8 s
@@ -126,4 +147,3 @@
   </script>
 </body>
 </html>
-
